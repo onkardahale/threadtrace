@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.svg">
-    <img alt="threadtrace" src="assets/logo-light.svg" width="400">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.png">
+    <img alt="threadtrace" src="assets/logo-light.png" width="400">
   </picture>
 </p>
 
@@ -26,7 +26,7 @@
 threadtrace is a Claude Code plugin that traces error paths through your code — across files, into `node_modules/`, through library source code — to find correctness bugs that linters, type checkers, and tests all miss. Multi-agent investigation that reads actual library source instead of trusting documentation.
 
 <p align="center">
-  <img src="assets/demo.svg" alt="threadtrace finding a bug chain — dead retry logic masking a race condition" width="800">
+  <img src="assets/demo.gif" alt="threadtrace finding a bug chain — dead retry logic masking a race condition" width="800">
 </p>
 
 ## What It Finds
