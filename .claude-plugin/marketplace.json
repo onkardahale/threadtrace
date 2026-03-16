@@ -9,7 +9,10 @@
       "name": "threadtrace",
       "description": "Trace threads through tangled code to find hidden correctness bugs — the silent failures that break production while dashboards show green",
       "version": "1.0.0",
-      "source": "."
+      "source": {
+        "source": "github",
+        "repo": "onkardahale/threadtrace"
+      }
     }
   ]
 }
