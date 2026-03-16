@@ -142,6 +142,63 @@ Fixing the `.find()` without fixing the `await`s would activate the race conditi
 
 This is why threadtrace continues investigating after finding a bug instead of stopping. Each finding generates new seeds, and the investigation builds on itself.
 
+## Design Principles
+
+The architecture isn't arbitrary. Each constraint exists because removing it produces false positives, missed bugs, or wasted investigation.
+
+### Separate discovery from judgment
+
+When one agent finds something suspicious and then evaluates whether it's real, confirmation bias is structural — not a personality flaw you can prompt away. The agent has already built a narrative. It's primed.
+
+threadtrace makes this impossible architecturally. Minos has no project memory, receives no discovery context, and starts from "the code is correct." This isn't "be skeptical" in a system prompt. It's a separate agent instance that literally cannot access the discovery reasoning.
+
+### Observe before you classify
+
+Theseus documents behavior neutrally: "this function catches the error and returns an empty array." Not "this function incorrectly swallows the error."
+
+Why: premature classification corrupts downstream reasoning. If Theseus says "bug," Daedalus looks for confirming patterns instead of comparing objectively. If the trace says "behavior," Daedalus compares siblings on equal footing — and the deviation becomes evidence, not assumption.
+
+The orchestrator classifies. Nobody else does.
+
+### Centralize synthesis, distribute collection
+
+Icarus collects the map. Theseus collects the trace. Daedalus collects the comparisons. But hypothesis formation stays with the orchestrator — always.
+
+Why: the orchestrator is the only agent with full context from every source. Delegating hypothesis formation to a subagent means that agent would need the trace AND the comparisons AND the map, which means either duplicating context (expensive) or compressing it (lossy). The orchestrator already has it.
+
+### Maximize damage, not coverage
+
+Icarus ranks by "if this fails silently, how bad is it?" — not "how likely is this to have a bug?" or "how complex is this code?"
+
+A low-probability bug in the payment path matters more than a high-probability bug in a logging utility. Seeds are ordered by blast radius because investigation time is finite and the goal is finding bugs that actually hurt.
+
+### Trace to terminal state
+
+Theseus doesn't stop at "the error is caught." It continues: caught by what? Re-thrown? Logged? Swallowed? Returned as a default value? Passed to a callback that nobody checks?
+
+Most error handling bugs aren't at the throw site — they're three handlers deep, where someone assumed the caller would deal with it and the caller assumed the callee already did.
+
+### Read source, not docs
+
+Libraries have undocumented behaviors that create correctness bugs in calling code. `setCustomUserClaims` overwrites instead of merging. urql returns `data` alongside `error`. `pushAsync` never settles if the callback isn't called.
+
+These aren't edge cases — they're the normal behavior of widely-used libraries that happens to differ from what the documentation implies. The only way to catch bugs caused by these behaviors is to read the actual implementation.
+
+### Continue after finding
+
+Most tools stop after finding a bug. threadtrace continues because bugs interact.
+
+A dead retry path masks a race condition. Fixing the retry without fixing the race makes production worse. A missing `await` is invisible until the error path it guards becomes reachable.
+
+Each finding generates new seeds. The investigation compounds — patterns learned from seed 1 inform seed 2, and false positive signatures from earlier runs prevent wasted verification in later ones.
+
+### Persist everything
+
+Investigation state (seeds completed, findings, patterns learned, false positive signatures) writes to disk after every phase. This serves two purposes:
+
+1. **Survives context limits** — Claude Code compacts conversation history as it approaches the context window. File-based state means nothing is lost.
+2. **Compounds across sessions** — the second run skips known issues and starts from the patterns learned in the first. Each run builds on the last.
+
 ## Limitations
 
 - Optimized for TypeScript/Node.js (seed catalog and tracing patterns)
