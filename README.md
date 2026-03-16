@@ -20,6 +20,7 @@
   <a href="#proof">Proof</a> &middot;
   <a href="#how-it-works">How It Works</a> &middot;
   <a href="#install">Install</a> &middot;
+  <a href="#when-to-use-it">When To Use It</a> &middot;
   <a href="#limitations">Limitations</a>
 </p>
 
@@ -46,7 +47,7 @@ Linters check syntax. Type checkers check types. Tests check the paths you thoug
 
 None of them trace what actually happens when a database write fails at 3 AM — through your error handler, into the retry logic, across the library boundary, and back up to the caller that assumes success.
 
-And none of them read library source code. Documentation says `setCustomUserClaims` "sets claims." The actual implementation **overwrites all existing claims**. Documentation says Firebase auth triggers "handle errors." The actual v1 SDK **does not retry on failure**. These aren't edge cases — they're the normal behavior of widely-used libraries that happens to differ from what the docs say.
+And none of them read library source code. Engineers rely on documentation contracts, but production behavior follows implementation reality. Docs are simplified. SDKs evolve. Edge cases become default paths under failure conditions. Documentation says `setCustomUserClaims` "sets claims" — the implementation **overwrites all existing claims**. Documentation says Firebase auth triggers "handle errors" — the v1 SDK **does not retry on failure**.
 
 threadtrace reads the actual code in `node_modules/`. That's how it finds bugs that exist in the gap between what you think a library does and what it actually does.
 
@@ -54,31 +55,15 @@ threadtrace reads the actual code in `node_modules/`. That's how it finds bugs t
 
 Most AI tools find bugs by convincing themselves they're right. threadtrace forces a second agent to try to prove them wrong.
 
-```
-/threadtrace:threadtrace
-│
-├── Scout (haiku, fast)
-│   Scans codebase → ranks operations by "if this fails silently, how bad?"
-│
-├── Thread Tracer (one per path, parallel)
-│   Traces error path end-to-end INTO node_modules/
-│   Reads library source code. Neutral: documents behavior, doesn't judge.
-│
-├── Pattern Architect (sonnet)
-│   Compares against 3-5 sibling functions + git history
-│   "4/5 re-throw, this one swallows. Sibling was fixed 2 weeks ago."
-│
-├── Hypothesis Formation (orchestrator)
-│   Mechanism + downstream effect + blast radius + confidence score
-│
-└── Independent Judge (one per hypothesis, parallel)
-    Receives ONLY: "investigate whether X handles Y correctly" + file paths
-    Never sees discovery reasoning. Tries to disprove. Writes test case.
-```
+Three phases:
 
-The judge is a separate agent instance with no shared memory. It doesn't see how the hypothesis was formed, what the confidence score is, or what evidence was collected. Its default stance is that the code is correct. This isn't a prompt trick ("be skeptical") — it's architectural. The judge literally cannot access the discovery context because it was never provided.
+1. **Discover** — Scout maps the codebase by damage potential. Tracer follows error paths end-to-end, across files, into library source in `node_modules/`. Documents behavior neutrally without judging. Pattern Architect compares against sibling functions and git history.
 
-[Full methodology →](METHODOLOGY.md)
+2. **Hypothesize** — Orchestrator synthesizes traces into structured hypotheses: specific mechanism, downstream effect, blast radius, confidence score, and a concrete 1-3 line fix.
+
+3. **Adversarial Verify** — A separate agent instance receives only the hypothesis and file paths. No discovery context, no confidence scores, no evidence. Default stance: the code is correct. It tries to disprove the hypothesis. If it can't, it writes a test case.
+
+The judge literally cannot access the discovery context because it was never provided. This isn't a prompt trick — it's architectural. [Full methodology →](METHODOLOGY.md)
 
 ## Install
 
@@ -94,32 +79,52 @@ claude --plugin-dir ~/.claude/plugins/threadtrace
 
 ## Run
 
+Most users start with a specific concern:
+
 ```bash
-# Full investigation — auto-scans, auto-seeds, auto-continues
-/threadtrace:threadtrace
-
-# Target a specific concern
+# Investigate a specific suspicion
 /threadtrace:threadtrace "what happens when the payment write fails?"
-
-# Quick single-path trace (no verification)
-/threadtrace:threadtrace-trace "src/handlers/payment.ts error path"
 
 # Verify a specific claim
 /threadtrace:threadtrace-verify "the retry in queue.ts never fires"
+
+# Quick single-path trace (no verification)
+/threadtrace:threadtrace-trace "src/handlers/payment.ts error path"
 ```
 
-Seed selection is automatic — the scout ranks operations by damage potential and picks the highest-risk path. You can also provide your own seed if you already suspect something.
+Auto mode scans the codebase and picks the highest-risk path:
+
+```bash
+/threadtrace:threadtrace
+```
+
+## When To Use It
+
+**threadtrace works best when:**
+
+- Code has async boundaries, retries, or multi-step operations
+- Error handling paths exist but aren't well tested
+- Behavior depends on library internals (SDKs, ORMs, queue libraries)
+- You suspect something is silently wrong but can't pinpoint it
+
+**Less effective for:**
+
+- Pure algorithmic bugs (wrong formula, off-by-one)
+- UI-only logic with no backend interactions
+- Systems with exhaustive integration test coverage
 
 ## Persistent Memory
 
-Findings, learned patterns, and verified library behaviors persist to `.claude/threadtrace/`. The second run skips known issues, avoids known false positive patterns, and starts from what was learned in the first. Each run compounds on the last.
+Findings, learned patterns, and verified library behaviors persist to `.claude/threadtrace/` in the target project. The second run skips known issues, avoids known false positive patterns, and starts from what was learned in the first. Each run compounds on the last.
+
+Memory is local to the project and can be cleared at any time by deleting `.claude/threadtrace/`.
 
 ## Limitations
 
 - Currently optimized for TypeScript/Node.js codebases (seed catalog)
 - Requires Claude Code (uses multi-agent subagent spawning)
 - Each full investigation uses ~50-100K tokens across agents
-- Static analysis only — traces code paths, doesn't execute them
+- Does not execute code — reconstructs execution paths from source, including library internals
 - Confidence calibration is based on limited production runs
 - Not a replacement for tests — finds the bugs you didn't know to test for
 
