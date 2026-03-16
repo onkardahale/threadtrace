@@ -53,7 +53,8 @@ threadtrace does.
 ## Install
 
 ```bash
-/plugin install threadtrace@onkardahale/threadtrace
+/plugin marketplace add onkardahale/threadtrace
+/plugin install threadtrace@onkardahale-threadtrace
 ```
 
 ## Run

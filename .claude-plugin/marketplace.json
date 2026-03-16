@@ -1,0 +1,11 @@
+{
+  "name": "onkardahale-threadtrace",
+  "description": "Multi-agent correctness bug discovery plugins",
+  "plugins": [
+    {
+      "name": "threadtrace",
+      "description": "Trace threads through tangled code to find hidden correctness bugs — the silent failures that break production while dashboards show green",
+      "version": "1.0.0"
+    }
+  ]
+}
