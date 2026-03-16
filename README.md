@@ -76,7 +76,7 @@ No config. No API keys. It scans your codebase, picks the highest-damage error p
 
 ## How It Works
 
-Four agents with independent context. The agent that discovers a potential bug is never the agent that verifies it.
+Four agents with independent context. The agent that discovers a potential bug is never the agent that verifies it. [Full methodology →](METHODOLOGY.md)
 
 ```
 /threadtrace:threadtrace
