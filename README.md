@@ -53,8 +53,13 @@ threadtrace does.
 ## Install
 
 ```bash
-/plugin marketplace add onkardahale/threadtrace
-/plugin install threadtrace@onkardahale-threadtrace
+git clone https://github.com/onkardahale/threadtrace.git ~/.claude/plugins/threadtrace
+```
+
+Then start Claude Code with the plugin:
+
+```bash
+claude --plugin-dir ~/.claude/plugins/threadtrace
 ```
 
 ## Run
